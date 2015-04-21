@@ -3,7 +3,8 @@ window.Shortly = Backbone.View.extend({
 
   events: {
     'click li a.index':  'renderIndexView',
-    'click li a.create': 'renderCreateView'
+    'click li a.create': 'renderCreateView',
+    'click div.navigation button': 'signup'
   },
 
   initialize: function(){
@@ -19,6 +20,15 @@ window.Shortly = Backbone.View.extend({
   render: function(){
     this.$el.html( this.template() );
     return this;
+  },
+
+  signup : function () {
+    console.log('signup!');
+    var username = $('input.signup-username').val();
+    var password = $('input.signup-password').val();
+    $.post('/signup', {username: username, password: password}, function (data, success) {
+      console.log('signup: ', arguments);
+    });
   },
 
   renderIndexView: function(e){

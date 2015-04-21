@@ -78,6 +78,20 @@ function(req, res) {
 // Write your authentication routes here
 /************************************************************/
 
+// Account Creation
+// ----------------------------------------------------------
+DB = {
+
+};
+app.post('/signup', function (req, res) {
+  
+  // Return signup page
+  DB.username = req.body.username;
+  DB.password = req.body.password;
+
+  
+  res.send('got it');
+});
 
 
 /************************************************************/
