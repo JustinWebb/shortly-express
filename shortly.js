@@ -2,7 +2,7 @@ var express = require('express');
 var util = require('./lib/utility');
 var partials = require('express-partials');
 var bodyParser = require('body-parser');
-
+var bcrypt = require('bcrypt-nodejs');
 
 var db = require('./app/config');
 var Users = require('./app/collections/users');
@@ -22,26 +22,30 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(__dirname + '/public'));
 
+// SESSION SUPPORT ////////////////////////////////////////
 
-app.get('/', 
-function(req, res) {
+var session = require('express-session');
+app.use(session({
+  secret: 'shhh, it\'s a secret',
+  resave: false,
+  saveUninitialized: true
+}));
+
+app.get('/', util.checkUser, function(req, res) {
   res.render('index');
 });
 
-app.get('/create', 
-function(req, res) {
+app.get('/create', util.checkUser, function(req,  res) {
   res.render('index');
 });
 
-app.get('/links', 
-function(req, res) {
+app.get('/links', util.checkUser, function(req, res) {
   Links.reset().fetch().then(function(links) {
     res.send(200, links.models);
   });
 });
 
-app.post('/links', 
-function(req, res) {
+app.post('/links', util.checkUser, function(req, res) {
   var uri = req.body.url;
 
   if (!util.isValidUrl(uri)) {
@@ -78,21 +82,40 @@ function(req, res) {
 // Write your authentication routes here
 /************************************************************/
 
-// Account Creation
-// ----------------------------------------------------------
-DB = {
-
-};
-app.post('/signup', function (req, res) {
-  
-  // Return signup page
-  DB.username = req.body.username;
-  DB.password = req.body.password;
-
-  
-  res.send('got it');
 });
 
+app.post('/signup', function(req, res) {
+  var username = req.body.username;
+  var password = req.body.password;
+
+  // CODE HERE!
+  new User({ username: username })
+    .fetch()
+    .then(function(user) {
+      if (!user) {
+        // BASIC VERSION
+        // bcrypt.hash(password, null, null, function(err, hash){
+        //   Users.create({
+        //     username: username,
+        //     password: hash
+        //   }).then(function(user) {
+        //       util.createSession(req, res, user);
+        //   });
+        // });
+        // ADVANCED VERSION -- see model
+        var newUser = new User({
+          username: username,
+          password: password
+        });
+        newUser.save().then(function(savedUser){
+          util.createSession(req, res, savedUser);
+        })
+      } else {
+        console.log('Account already exists');
+        res.redirect('/signup');
+      }
+    });
+});
 
 /************************************************************/
 // Handle the wildcard route last - if all other routes fail
@@ -110,13 +133,10 @@ app.get('/*', function(req, res) {
       });
 
       click.save().then(function() {
-        db.knex('urls')
-          .where('code', '=', link.get('code'))
-          .update({
-            visits: link.get('visits') + 1,
-          }).then(function() {
-            return res.redirect(link.get('url'));
-          });
+        link.set('visits', link.get('visits')+1);
+        link.save().then(function() {
+          return res.redirect(link.get('url'));
+        });
       });
     }
   });
